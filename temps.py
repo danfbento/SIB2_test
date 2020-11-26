@@ -7,21 +7,23 @@ def return_results(results_dir):
     summary = []
     for txt in data_files:
         with open(os.path.join(results_dir,txt)) as f:
-            line_count = sum(1 for line in f if line.strip())
-        #print(f"{line_count} animals detected in {txt}")
-        summary.append([txt, line_count])
-    
-    #results = {item[0]: item[1] for item in summary}
-    keys = ['image', 'animals']
-    results = {x:list(y) for x,y in zip(keys, zip(*summary))}
-    #print(results)
-    print(results['image'][0],results['animals'][0])
-    return results
-    
-        
+            for line in f:
+                content = line.split()
+                
+                summary.append({
+                    'image': txt,
+                    'detected_class': content[0],
+                    'detected_coord1': content[1],
+                    'detected_coord2': content[2],
+                    'detected_coord3': content[3],
+                    'detected_coord4': content[4]
+                })
+                
+    return summary
 
 results_dir = 'C:/Users/Danilo.Bento/Icon Dropbox/DEVDATA/RO/DEVELOPMENT/SIB2/tutorials/model5/mod5_deploy/inference/output'
 res_test = return_results(results_dir)
+res_test
 
 ###########################################################
 import base64
