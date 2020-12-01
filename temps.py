@@ -1,5 +1,11 @@
 import os
+import mysql.connector
+from mysql.connector import errorcode
 
+# def get_ssl():file
+#   ssl = os.path.join('.', 'ssl', 'DigiCertGlobalRootG2.crt.pem')
+  
+  
 def return_results(results_dir):
     all_files = os.listdir(os.path.abspath(results_dir))
     data_files = list(filter(lambda file: file.endswith('.txt'), all_files))
@@ -18,12 +24,110 @@ def return_results(results_dir):
                     'detected_coord3': content[3],
                     'detected_coord4': content[4]
                 })
-                
-    return summary
+    
+    # Obtain connection string information from the portal
+    config = {
+      'host':'sib2-mysql-server.mysql.database.azure.com',
+      'user':'icon_sib2@sib2-mysql-server',
+      'password':'D02_YK29',
+      'database':'SIB2DB',
+      #'client_flags': [ClientFlag.SSL],
+      'ssl_ca': str(os.path.join('.', 'deployassets', 'ssl', 'DigiCertGlobalRootG2.crt.pem'))
+      #'ssl_verify_cert':'true'
+    }
+    
+    # Construct connection string
+    try:
+      conn = mysql.connector.connect(**config)
+      print("Connection established")
+    except mysql.connector.Error as err:
+      if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+        print("Something is wrong with the user name or password")
+      elif err.errno == errorcode.ER_BAD_DB_ERROR:
+        print("Database does not exist")
+      else:
+        print(err)
+    else:
+      cursor = conn.cursor()
+      
+      counter = 1
+      total = len(summary)    
+      for dictionary in summary:
+        # Insert data into table
+        cursor.execute("INSERT INTO model5_test_detections (image, detected_class,detected_coord1, detected_coord2, detected_coord3, detected_coord4) VALUES (%s, %s, %s, %s, %s, %s);",
+                      (dictionary['image'], 
+                       dictionary['detected_class'], 
+                       dictionary['detected_coord1'], 
+                       dictionary['detected_coord2'], 
+                       dictionary['detected_coord3'], 
+                       dictionary['detected_coord4']
+                       )
+                      )
+        print(f"Detection {counter} from {total}." 
+              f"Detected class = {dictionary['detected_class']}")
+        counter = counter +1
+      print("Inserted",total,"row(s) of data into the database")
+      
+      # Cleanup
+      conn.commit()
+      cursor.close()
+      conn.close()
+      print("Done.")
 
 results_dir = 'C:/Users/Danilo.Bento/Icon Dropbox/DEVDATA/RO/DEVELOPMENT/SIB2/tutorials/model5/mod5_deploy/inference/output'
-res_test = return_results(results_dir)
-res_test
+return_results(results_dir)
+
+###########################################################
+#import mysql.connector
+#from mysql.connector import errorcode
+from datetime import datetime
+
+dt = datetime.utcnow()
+
+# Obtain connection string information from the portal
+config = {
+  'host':'sib2-mysql-server.mysql.database.azure.com',
+  'user':'icon_sib2@sib2-mysql-server',
+  'password':'D02_YK29',
+  'database':'SIB2DB'
+  #'client_flags': [ClientFlag.SSL],
+  #'ssl_cert': '/var/wwww/html/DigiCertGlobalRootG2.crt.pem'
+}
+
+# Construct connection string
+try:
+   conn = mysql.connector.connect(**config)
+   print("Connection established")
+except mysql.connector.Error as err:
+  if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+    print("Something is wrong with the user name or password")
+  elif err.errno == errorcode.ER_BAD_DB_ERROR:
+    print("Database does not exist")
+  else:
+    print(err)
+else:
+  cursor = conn.cursor()
+
+  # Drop previous table of same name if one exists
+#   cursor.execute("DROP TABLE IF EXISTS inventory;")
+#   print("Finished dropping table (if existed).")
+
+#   # Create table
+#   cursor.execute(
+#       "CREATE TABLE model5_test_detections (id serial PRIMARY KEY, image VARCHAR(50), detected_class INTEGER, detected_coord1 FLOAT, detected_coord2 FLOAT, detected_coord3 FLOAT, detected_coord4 FLOAT);"
+#       )
+#   print("Finished creating table.")
+
+  # Insert some data into table
+  cursor.execute("INSERT INTO model5_test_detections (image, detected_class,detected_coord1, detected_coord2, detected_coord3, detected_coord4) VALUES (%s, %s, %s, %s, %s, %s);",
+                 ("test.txt", 1, 0.1, 0.1, 0.1, 0.1))
+  print("Inserted",cursor.rowcount,"row(s) of data.")
+
+  # Cleanup
+  conn.commit()
+  cursor.close()
+  conn.close()
+  print("Done.")
 
 ###########################################################
 import base64

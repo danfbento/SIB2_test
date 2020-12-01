@@ -6,6 +6,8 @@ from numpy import random
 import time
 from pathlib import Path
 import cv2
+import mysql.connector
+from mysql.connector import errorcode
 
 # Custom imports
 from deployassets.models.experimental import attempt_load
@@ -22,16 +24,66 @@ def return_results(results_dir):
     summary = []
     for txt in data_files:
         with open(os.path.join(results_dir,txt)) as f:
-            line_count = sum(1 for line in f if line.strip())
-        #print(f"{line_count} animals detected in {txt}")
-        summary.append([txt, line_count])
+            for line in f:
+                content = line.split()
+                
+                summary.append({
+                    'image': txt,
+                    'detected_class': content[0],
+                    'detected_coord1': content[1],
+                    'detected_coord2': content[2],
+                    'detected_coord3': content[3],
+                    'detected_coord4': content[4]
+                })
     
-    #results = {item[0]: item[1] for item in summary}
-    keys = ['image', 'animals']
-    results = {x:list(y) for x,y in zip(keys, zip(*summary))}
-    #print(results)
-    print(results['image'][0],results['animals'][0])
-    return results
+    # Obtain connection string information from the portal
+    config = {
+      'host':'sib2-mysql-server.mysql.database.azure.com',
+      'user':'icon_sib2@sib2-mysql-server',
+      'password':'D02_YK29',
+      'database':'SIB2DB',
+      #'client_flags': [ClientFlag.SSL],
+      'ssl_ca': str(os.path.join('.', 'deployassets', 'ssl', 'DigiCertGlobalRootG2.crt.pem'))
+      #'ssl_verify_cert':'true'
+    }
+    
+    # Construct connection string
+    try:
+      conn = mysql.connector.connect(**config)
+      print("Connection established")
+    except mysql.connector.Error as err:
+      if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+        print("Something is wrong with the user name or password")
+      elif err.errno == errorcode.ER_BAD_DB_ERROR:
+        print("Database does not exist")
+      else:
+        print(err)
+    else:
+      cursor = conn.cursor()
+      
+      counter = 1
+      total = len(summary)    
+      for dictionary in summary:
+        # Insert data into table
+        cursor.execute("INSERT INTO model5_test_detections (image, detected_class,detected_coord1, detected_coord2, detected_coord3, detected_coord4) VALUES (%s, %s, %s, %s, %s, %s);",
+                      (dictionary['image'], 
+                       dictionary['detected_class'], 
+                       dictionary['detected_coord1'], 
+                       dictionary['detected_coord2'], 
+                       dictionary['detected_coord3'], 
+                       dictionary['detected_coord4']
+                       )
+                      )
+        print(f"Detection {counter} from {total}." 
+              f"Detected class = {dictionary['detected_class']}")
+        counter = counter +1
+      print("Inserted",total,"row(s) of data into the database")
+      
+      # Cleanup
+      conn.commit()
+      cursor.close()
+      conn.close()
+      print("Done.")
         
 ################################ SCORE FUNCTIONS
 def init():
@@ -187,7 +239,8 @@ def run(input_images):
     if save_txt or save_img:
         print('Results saved to %s' % Path(out))
     
-    results = return_results(Path(out))
-    return results
+    #results = return_results(Path(out))
+    return_results(Path(out))
+    #return results
 
     print('Done. (%.3fs)' % (time.time() - t0))

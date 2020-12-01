@@ -77,9 +77,7 @@ import requests
 import os
 
 img_path = 'C:/Users/Danilo.Bento/Icon Dropbox/DEVDATA/RO/DEVELOPMENT/SIB2/tutorials/model5/mod5_deploy/test_geo/niuk_nie1_wv04_05042018_x832_y4992.png'
-#link = 'http://51.11.39.149:80/api/v1/service/aks-mod5-test/score'
 link = aks_service.scoring_uri
-#api_key = 'BLijQzGa9KcdG4IObGLQqdthXVHsnIqb'
 api_key = aks_service.get_keys()[0]
 
 def send2score(img_path, score_url, api_key):
@@ -97,6 +95,9 @@ def send2score(img_path, score_url, api_key):
     resp = requests.post(url=link, data=jsonimg2, headers=headers)
     print(resp.text)
 
+send2score(img_path=img_path, score_url=link, api_key=api_key)
+
+# no objects on this image
 img_path2 = 'C:/Users/Danilo.Bento/Icon Dropbox/DEVDATA/RO/DEVELOPMENT/SIB2/tutorials/model5/mod5_deploy/test_geo/niuk_nie1_wv04_05042018_x416_y0.png'
 send2score(img_path=img_path2, score_url=link, api_key=api_key)
 
